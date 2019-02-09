@@ -1,0 +1,50 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: tf-object-detection
+spec:
+  template:
+    spec:
+      containers:
+      - name: tf-object-detection
+        image: jseo/tf-object-detection:only-packages
+        imagePullPolicy: Always
+        resources:
+          limits:
+            nvidia.com/gpu: "1"
+            memory: "24G"
+          requests:
+            nvidia.com/gpu: "1"
+            memory: "16G"
+        volumeMounts:
+        - mountPath: /nas0
+          name: nas0
+        workingDir: /nas0/home/jonghoon.seo/models/research
+        env:
+        - name: PYTHONPATH
+          value: "/nas0/home/jonghoon.seo/models/research:/nas0/home/jonghoon.seo/models/research/slim"
+        - name: PIPELINE_CONFIG_PATH
+          value: "/nas0/home/jonghoon.seo/models/research/object_detection/samples/configs/faster_rcnn_resnet50_pets.config"
+        - name: MODEL_DIR
+          value: "/nas0/home/jonghoon.seo/pascal-model"
+        - name: NUM_TRAIN_STEPS
+          value: "50000"
+        - name: SAMPLE_1_OF_N_EVAL_EXAMPLES
+          value: "1"
+        command: [
+          "python",
+          "object_detection/model_main.py",
+          "--pipeline_config_path=$(PIPELINE_CONFIG_PATH)",
+          "--model_dir=$(MODEL_DIR)",
+          "--num_train_steps=$(NUM_TRAIN_STEPS)",
+          "--sample_1_of_n_eval_examples=$(SAMPLE_1_OF_N_EVAL_EXAMPLES)",
+          "--alsologtostderr"
+        ]
+      volumes:
+          - hostPath:
+              path: /nas0
+            name: nas0
+      restartPolicy: Never
+      imagePullSecrets:
+      - name: docker-cred
+  backoffLimit: 4
