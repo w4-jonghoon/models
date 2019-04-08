@@ -1,0 +1,58 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: test-coco
+spec:
+  template:
+    spec:
+      containers:
+      - name: tf-object-detection
+        image: jseo/tf-object-detection:only-packages
+        imagePullPolicy: Always
+        resources:
+          limits:
+            nvidia.com/gpu: "1"
+            memory: "24G"
+          requests:
+            nvidia.com/gpu: "1"
+            memory: "24G"
+        volumeMounts:
+        - mountPath: /nas0
+          name: nas0
+        workingDir: /nas0/home/jonghoon.seo/object_detection
+        env:
+        - name: PYTHONPATH
+          value: "/nas0/home/jonghoon.seo/object_detection:/nas0/home/jonghoon.seo/object_detection/slim"
+        # MS COCO
+        - name: PIPELINE_CONFIG_PATH
+          value: "/nas0/home/jonghoon.seo/object_detection/object_detection/samples/configs/faster_rcnn_resnet101_coco.config"
+        - name: MODEL_DIR
+          value: "/nas0/home/jonghoon.seo/coco-models"
+        # To test purpose, uncomment the following commented lines - MODEL_DIR, CHECKPOINT_DIR, run_once
+        # - name: MODEL_DIR
+        #   value: "/nas0/home/jonghoon.seo/defect36_half_tfrecord/coco-models/result"
+        # - name: CHECKPOINT_DIR
+        #   value: "/nas0/home/jonghoon.seo/defect36_half_tfrecord/coco-models"
+        - name: NUM_TRAIN_STEPS
+          value: "5000"
+        - name: SAMPLE_1_OF_N_EVAL_EXAMPLES
+          value: "1"
+        command: [
+          "python",
+          "object_detection/model_main.py",
+          "--pipeline_config_path=$(PIPELINE_CONFIG_PATH)",
+          "--model_dir=$(MODEL_DIR)",
+          # "--checkpoint_dir=$(CHECKPOINT_DIR)",
+          # "--run_once",
+          "--num_train_steps=$(NUM_TRAIN_STEPS)",
+          "--sample_1_of_n_eval_examples=$(SAMPLE_1_OF_N_EVAL_EXAMPLES)",
+          "--alsologtostderr"
+        ]
+      volumes:
+          - hostPath:
+              path: /nas0
+            name: nas0
+      restartPolicy: Never
+      imagePullSecrets:
+      - name: docker-cred
+  backoffLimit: 6
